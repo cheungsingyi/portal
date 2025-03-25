@@ -1,11 +1,6 @@
-# Future-Proof GCP Infrastructure Diagram
-
-## Enterprise-Level Evolution Roadmap
-
-```mermaid
 graph TD
     %% Current Components (Grayed out to show transition)
-    subgraph "Current Infrastructure" %% style=fill:#f5f5f5,stroke:#999
+    subgraph "Current Infrastructure"
         A1[Data Science Workbench] -.->|Migrate| A2
         B1[Scheduler Jobs] -.->|Upgrade| B2
         C1[NAS Drive] -.->|Migrate| C2
@@ -91,12 +86,12 @@ graph TD
     classDef frontend fill:#bff,stroke:#333,stroke-width:2px
 
     class A1,B1,C1,D1,E1,F1 current
-    class A2,B2,G,H,I,J,K,P,Q,R,U current
-    class C2,L,M current
-    class N,Z current
-    class AA,BB,CC,DD current
-    class O,V,W,Y current
-    class D2,E2,S,T,X current
+    class A2,B2,G,H,I,J,K,P,Q,R,U compute
+    class C2,L,M storage
+    class N,Z analytics
+    class AA,BB,CC,DD security
+    class O,V,W,Y serverless
+    class D2,E2,S,T,X frontend
 ```
 
 ## GCP Infrastructure Components
