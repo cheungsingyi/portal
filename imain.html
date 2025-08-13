@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Report: Graph Technology in Commercial Banking</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/themes/prism-okaidia.min.css">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        pre[class*="language-"] {
+            border-radius: 0.5rem;
+            padding: 1.25rem;
+            font-size: 0.875rem;
+            height: 100%;
+        }
+        .mindmap-pre {
+            background-color: #2d3748; /* bg-gray-800 */
+            color: #f7fafc; /* text-gray-100 */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            font-family: monospace;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            white-space: pre;
+            overflow-x: auto;
+            height: 100%;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <!-- Header -->
+    <header class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+            <h1 class="text-3xl font-bold leading-tight text-gray-900">Graph Technology Implementation in Commercial Banking</h1>
+            <p class="mt-2 text-sm text-gray-600">A comprehensive report including use cases, roadmaps, mind maps, and sample code.</p>
+        </div>
+    </header>
+
+    <main class="py-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+            <!-- Tabs Navigation -->
+            <div class="mb-8">
+                <div class="border-b border-gray-200">
+                    <nav class="-mb-px flex space-x-8" aria-label="Tabs">
+                        <button onclick="changeTab(event, 'fraud-detection')" class="tab-link whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-indigo-500 text-indigo-600">
+                            Fraud Detection
+                        </button>
+                        <button onclick="changeTab(event, 'aml-kyc')" class="tab-link whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                            AML & KYC
+                        </button>
+                        <button onclick="changeTab(event, 'customer-360')" class="tab-link whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                            Customer 360
+                        </button>
+                        <button onclick="changeTab(event, 'risk-compliance')" class="tab-link whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                            Risk & Compliance
+                        </button>
+                    </nav>
+                </div>
+            </div>
+            
+            <!-- Use Case Content -->
+            <div id="fraud-detection" class="tab-content active">
+                <div class="bg-white rounded-lg shadow-md overflow-hidden p-6 md:p-8 space-y-8">
+                    <!-- Header -->
+                    <div class="flex items-center">
+                        <svg class="h-8 w-8 text-red-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <h2 class="text-2xl font-semibold text-gray-900">Fraud Detection</h2>
+                    </div>
+
+                    <!-- Key Points & Tech Stack -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-800 mb-3">Key Points</h3>
+                            <ul class="space-y-2 text-gray-600 list-disc list-inside">
+                                <li>Uncover complex fraud rings and collusion patterns in real-time.</li>
+                                <li>Identify shared identifiers (IPs, devices, addresses) across seemingly unrelated accounts.</li>
+                                <li>Reduce false positives by understanding the context of transactions.</li>
+                                <li>Detect sophisticated schemes like synthetic identity fraud and account takeovers.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-800 mb-3">Tech Stack</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">Neo4j / TigerGraph</span>
+                                <span class="bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">Apache Kafka</span>
+                                <span class="bg-yellow-100 text-yellow-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">Python (PyData)</span>
+                                <span class="bg-purple-100 text-purple-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">Linkurious / KeyLines</span>
+                                <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">AWS / Azure / GCP</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Roadmap -->
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-800 mb-4">Implementation Roadmap</h3>
+                        <ol class="relative border-l border-gray-200">
+                            <li class="mb-6 ml-4"><div class="absolute w-3 h-3 bg-gray-200 rounded-full mt-1.5 -left-1.5 border border-white"></div><h4 class="text-base font-semibold text-gray-900">Phase 1: Discovery & Data Sourcing</h4><p class="text-sm text-gray-600">Identify fraud patterns, source transaction, customer, and device data.</p></li>
+                            <li class="mb-6 ml-4"><div class="absolute w-3 h-3 bg-gray-200 rounded-full mt-1.5 -left-1.5 border border-white"></div><h4 class="text-base font-semibold text-gray-900">Phase 2: Graph Modeling & ETL</h4><p class="text-sm text-gray-600">Design graph schema (nodes: Customer, Account, Transaction, Device; edges: HAS_ACCOUNT, MADE_TRANSACTION). Build data pipelines.</p></li>
+                            <li class="mb-6 ml-4"><div class="absolute w-3 h-3 bg-gray-200 rounded-full mt-1.5 -left-1.5 border border-white"></div><h4 class="text-base font-semibold text-gray-900">Phase 3: Algorithm & Rules Development</h4><p class="text-sm text-gray-600">Develop Cypher/Gremlin queries for known patterns. Implement graph algorithms (e.g., community detection) for anomaly scoring.</p></li>
+                            <li class="ml-4"><div class="absolute w-3 h-3 bg-gray-200 rounded-full mt-1.5 -left-1.5 border border-white"></div><h4 class="text-base font-semibold text-gray-900">Phase 4: Integration & Deployment</h4><p class="text-sm text-gray-600">Integrate with transaction monitoring systems. Deploy visualization tools for fraud analysts.</p></li>
+                        </ol>
+                    </div>
+                    
+                    <!-- Mind Map & Code -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-800 mb-4">Mind Map</h3>
+                            <pre class="mindmap-pre"><code>(Fraud Detection)
+|
++-- (Data Sources)
+|   |-- Transaction Streams (Real-time)
+|   |-- Customer Information (CRM)
+|   |-- Device & IP Data
+|   +-- Known Fraudster Lists
+|
++-- (Graph Model)
+|   |-- Nodes: Customer, Account, Transaction
+|   +-- Edges: MADE_TRANSACTION, USES_DEVICE
+|
++-- (Analytics & Algorithms)
+|   |-- Real-time Pattern Matching
+|   |-- Community Detection
+|   +-- Anomaly Scoring
+|
++-- (Outcomes & Actions)
+    |-- Real-time Transaction Blocking
+    |-- Alert Generation for Analysts
+    +-- Visual Investigation Dashboard</code></pre>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-800 mb-4">Sample Code</h3>
+                            <pre><code class="language-python">from neo4j import GraphDatabase
+
+URI = "neo4j+s://instance.databases.neo4j.io"
+AUTH = ("neo4j", "password")
+
+class FraudDetection:
+    def __init__(self, driver):
+        self.driver = driver
+
+    def find_fraud_ring_by_device(self, device_id):
+        with self.driver.session() as session:
+            result = session.run("""
+                MATCH (d:Device {id: $device_id})
+                MATCH (d)<-[:USED_DEVICE]-(c:Customer)
+                MATCH (c)-[:HAS_ACCOUNT]->(a:Account)
+                RETURN c.name AS customer, a.id AS account
+                """, device_id=device_id)
+            return list(result)
+</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="aml-kyc" class="tab-content">
+                <div class="bg-white rounded-lg shadow-md overflow-hidden p-6 md:p-8 space-y-8">
+                    <!-- Header -->
+                    <div class="flex items-center">
+                        <svg class="h-8 w-8 text-blue-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" /></svg>
+                        <h2 class="text-2xl font-semibold text-gray-900">Anti-Money Laundering (AML) & KYC</h2>
+                    </div>
+
+                     <!-- Key Points & Tech Stack -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-800 mb-3">Key Points</h3>
+                            <ul class="space-y-2 text-gray-600 list-disc list-inside">
+                                <li>Identify Ultimate Beneficial Owners (UBOs) in complex corporate structures.</li>
+                                <li>Detect money laundering patterns like smurfing, structuring, and round-tripping.</li>
+                                <li>Enhance KYC processes by understanding customer networks and relationships.</li>
+                                <li>Streamline investigations with visual analysis of fund flows.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-800 mb-3">Tech Stack</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">Amazon Neptune / Neo4j</span>
+                                <span class="bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">Apache Spark</span>
+                                <span class="bg-yellow-100 text-yellow-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">Java / Scala</span>
+                                <span class="bg-purple-100 text-purple-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">Graph-based AML Solutions</span>
+                                <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">AWS / Azure</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Roadmap -->
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-800 mb-4">Implementation Roadmap</h3>
+                        <ol class="relative border-l border-gray-200">
+                             <li class="mb-6 ml-4"><div class="absolute w-3 h-3 bg-gray-200 rounded-full mt-1.5 -left-1.5 border border-white"></div><h4 class="text-base font-semibold text-gray-900">Phase 1: Data Aggregation</h4><p class="text-sm text-gray-600">Collect customer data, corporate registries, transaction history, and sanctions lists.</p></li>
+                             <li class="mb-6 ml-4"><div class="absolute w-3 h-3 bg-gray-200 rounded-full mt-1.5 -left-1.5 border border-white"></div><h4 class="text-base font-semibold text-gray-900">Phase 2: Entity Resolution & Graph Modeling</h4><p class="text-sm text-gray-600">Use entity resolution to link disparate records. Model graph with entities like Person, Company, Account and relationships like OWNS, CONTROLS.</p></li>
+                             <li class="mb-6 ml-4"><div class="absolute w-3 h-3 bg-gray-200 rounded-full mt-1.5 -left-1.5 border border-white"></div><h4 class="text-base font-semibold text-gray-900">Phase 3: Pattern Detection</h4><p class="text-sm text-gray-600">Write queries to find circular fund flows and layering. Use pathfinding algorithms to trace money trails.</p></li>
+                             <li class="ml-4"><div class="absolute w-3 h-3 bg-gray-200 rounded-full mt-1.5 -left-1.5 border border-white"></div><h4 class="text-base font-semibold text-gray-900">Phase 4: Alerting & Case Management</h4><p class="text-sm text-gray-600">Integrate graph insights into the existing AML alert system. Provide investigators with interactive graph visualization tools.</p></li>
+                        </ol>
+                    </div>
+
+                    <!-- Mind Map & Code -->
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div>
+                             <h3 class="text-lg font-medium text-gray-800 mb-4">Mind Map</h3>
+                             <pre class="mindmap-pre"><code>(AML & KYC)
+|
++-- (Data Sources)
+|   |-- Core Banking Systems
+|   |-- Corporate Registries
+|   |-- Sanctions & PEP Lists
+|   +-- Transaction History
+|
++-- (Graph Model)
+|   |-- Nodes: Person, Company, Account
+|   +-- Edges: OWNS, CONTROLS, SENT_FUNDS_TO
+|
++-- (Analytics & Algorithms)
+|   |-- UBO Discovery
+|   |-- Pattern Detection (smurfing, layering)
+|   +-- Shortest Path Analysis
+|
++-- (Outcomes & Actions)
+    |-- Automated UBO Reporting
+    |-- Enhanced Due Diligence Triggers
+    +-- Streamlined SAR Investigations</code></pre>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-800 mb-4">Sample Code</h3>
+                            <pre><code class="language-python">from neo4j import GraphDatabase
+
+URI = "neo4j+s://instance.databases.neo4j.io"
+AUTH = ("neo4j", "password")
+
+class AmlKyc:
+    def __init__(self, driver):
+        self.driver = driver
+
+    def find_ubo(self, company_name):
+        with self.driver.session() as session:
+            result = session.run("""
+                MATCH (c:Company {name: $company_name})
+                MATCH (c)<-[:OWNS*]-(p:Person)
+                RETURN DISTINCT p.name AS owner
+                """, company_name=company_name)
+            return [record["owner"] for record in result]
+</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Customer 360 Tab -->
+            <div id="customer-360" class="tab-content">
+                <div class="bg-white rounded-lg shadow-md overflow-hidden p-6 md:p-8 space-y-8">
+                     <!-- Header -->
+                    <div class="flex items-center">
+                        <svg class="h-8 w-8 text-green-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+                        <h2 class="text-2xl font-semibold text-gray-900">Customer 360</h2>
+                    </div>
+                    <!-- Content for Customer 360 -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-800 mb-3">Key Points</h3>
+                            <ul class="space-y-2 text-gray-600 list-disc list-inside">
+                                <li>Create a unified view of customers by connecting data from all silos.</li>
+                                <li>Understand household relationships, business affiliations, and social connections.</li>
+                                <li>Deliver hyper-personalized product recommendations and offers.</li>
+                                <li>Improve customer service with a complete view of a customer's history and network.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-800 mb-3">Tech Stack</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">Neo4j / DataStax</span>
+                                <span class="bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">Data Warehouse (Snowflake)</span>
+                                <span class="bg-yellow-100 text-yellow-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">Python / R</span>
+                                <span class="bg-purple-100 text-purple-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">Tableau / Power BI</span>
+                                <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">GCP / Azure</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-800 mb-4">Implementation Roadmap</h3>
+                        <ol class="relative border-l border-gray-200">
+                             <li class="mb-6 ml-4"><div class="absolute w-3 h-3 bg-gray-200 rounded-full mt-1.5 -left-1.5 border border-white"></div><h4 class="text-base font-semibold text-gray-900">Phase 1: Identify Data Sources</h4><p class="text-sm text-gray-600">Map all customer touchpoints: CRM, core banking, loan systems, web analytics, social media.</p></li>
+                             <li class="mb-6 ml-4"><div class="absolute w-3 h-3 bg-gray-200 rounded-full mt-1.5 -left-1.5 border border-white"></div><h4 class="text-base font-semibold text-gray-900">Phase 2: Build the Customer Graph</h4><p class="text-sm text-gray-600">Design a master customer schema. Ingest and link data to form a single customer identity.</p></li>
+                             <li class="mb-6 ml-4"><div class="absolute w-3 h-3 bg-gray-200 rounded-full mt-1.5 -left-1.5 border border-white"></div><h4 class="text-base font-semibold text-gray-900">Phase 3: Develop Recommendation Engine</h4><p class="text-sm text-gray-600">Use collaborative filtering and graph algorithms to find "customers like you" and recommend relevant products.</p></li>
+                             <li class="ml-4"><div class="absolute w-3 h-3 bg-gray-200 rounded-full mt-1.5 -left-1.5 border border-white"></div><h4 class="text-base font-semibold text-gray-900">Phase 4: CRM & App Integration</h4><p class="text-sm text-gray-600">Expose graph insights via APIs to CRM systems, mobile banking apps, and marketing automation platforms.</p></li>
+                        </ol>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div>
+                             <h3 class="text-lg font-medium text-gray-800 mb-4">Mind Map</h3>
+                             <pre class="mindmap-pre"><code>(Customer 360)
+|
++-- (Data Sources)
+|   |-- CRM Systems
+|   |-- Product Holdings
+|   |-- Web & Mobile Analytics
+|   +-- Social Media (optional)
+|
++-- (Graph Model)
+|   |-- Nodes: Customer, Product, Household
+|   +-- Edges: HOLDS_PRODUCT, PART_OF_HOUSEHOLD
+|
++-- (Analytics & Algorithms)
+|   |-- Community Detection
+|   |-- Collaborative Filtering
+|   +-- Next Best Action Prediction
+|
++-- (Outcomes & Actions)
+    |-- Personalized Marketing
+    |-- Proactive Customer Service
+    +-- Increased Cross-sell/Up-sell</code></pre>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-800 mb-4">Sample Code</h3>
+                            <pre><code class="language-python">from neo4j import GraphDatabase
+
+URI = "neo4j+s://instance.databases.neo4j.io"
+AUTH = ("neo4j", "password")
+
+class Customer360:
+    def __init__(self, driver):
+        self.driver = driver
+
+    def recommend_products(self, customer_id):
+        with self.driver.session() as session:
+            result = session.run("""
+                MATCH (c1:Customer {id: $customer_id})
+                MATCH (c1)-[:PART_OF_HOUSEHOLD]->()<-[:PART_OF_HOUSEHOLD]-(c2)
+                MATCH (c2)-[:HOLDS_PRODUCT]->(p:Product)
+                WHERE NOT (c1)-[:HOLDS_PRODUCT]->(p)
+                RETURN DISTINCT p.name as recommendation
+                LIMIT 5
+                """, customer_id=customer_id)
+            return [rec["recommendation"] for rec in result]
+</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Risk & Compliance Tab -->
+            <div id="risk-compliance" class="tab-content">
+                <div class="bg-white rounded-lg shadow-md overflow-hidden p-6 md:p-8 space-y-8">
+                     <!-- Header -->
+                    <div class="flex items-center">
+                         <svg class="h-8 w-8 text-yellow-500 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                        <h2 class="text-2xl font-semibold text-gray-900">Risk & Compliance</h2>
+                    </div>
+                    <!-- Content for Risk & Compliance -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-800 mb-3">Key Points</h3>
+                            <ul class="space-y-2 text-gray-600 list-disc list-inside">
+                                <li>Assess credit risk by analyzing a borrower's network and connections.</li>
+                                <li>Model complex dependencies in financial instruments for systemic risk analysis.</li>
+                                <li>Trace data lineage to ensure compliance with regulations like GDPR and BCBS 239.</li>
+                                <li>Identify conflicts of interest within the organization and with clients.</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-800 mb-3">Tech Stack</h3>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="bg-blue-100 text-blue-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">TigerGraph / Neo4j</span>
+                                <span class="bg-green-100 text-green-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">Apache Flink / Spark</span>
+                                <span class="bg-yellow-100 text-yellow-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">Python (NetworkX)</span>
+                                <span class="bg-purple-100 text-purple-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">Custom Dashboards (React/D3)</span>
+                                <span class="bg-indigo-100 text-indigo-800 text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">On-Premise / Hybrid Cloud</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-medium text-gray-800 mb-4">Implementation Roadmap</h3>
+                        <ol class="relative border-l border-gray-200">
+                             <li class="mb-6 ml-4"><div class="absolute w-3 h-3 bg-gray-200 rounded-full mt-1.5 -left-1.5 border border-white"></div><h4 class="text-base font-semibold text-gray-900">Phase 1: Define Risk Models</h4><p class="text-sm text-gray-600">Identify key risk indicators and data points for credit and systemic risk.</p></li>
+                             <li class="mb-6 ml-4"><div class="absolute w-3 h-3 bg-gray-200 rounded-full mt-1.5 -left-1.5 border border-white"></div><h4 class="text-base font-semibold text-gray-900">Phase 2: Create a Knowledge Graph</h4><p class="text-sm text-gray-600">Model all entities (customers, assets, regulations, data systems) and their relationships in a central knowledge graph.</p></li>
+                             <li class="mb-6 ml-4"><div class="absolute w-3 h-3 bg-gray-200 rounded-full mt-1.5 -left-1.5 border border-white"></div><h4 class="text-base font-semibold text-gray-900">Phase 3: Develop Risk Analytics</h4><p class="text-sm text-gray-600">Build graph-based models for credit scoring, stress testing, and data lineage tracking.</p></li>
+                             <li class="ml-4"><div class="absolute w-3 h-3 bg-gray-200 rounded-full mt-1.5 -left-1.5 border border-white"></div><h4 class="text-base font-semibold text-gray-900">Phase 4: Reporting & Visualization</h4><p class="text-sm text-gray-600">Develop dashboards for risk officers and compliance teams to explore and report on graph-derived insights.</p></li>
+                        </ol>
+                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div>
+                             <h3 class="text-lg font-medium text-gray-800 mb-4">Mind Map</h3>
+                             <pre class="mindmap-pre"><code>(Risk & Compliance)
+|
++-- (Data Sources)
+|   |-- Loan Origination Systems
+|   |-- Financial Instrument Data
+|   |-- Regulatory Documents
+|   +-- Internal HR Data
+|
++-- (Graph Model)
+|   |-- Nodes: Borrower, Loan, Asset, Regulation
+|   +-- Edges: GUARANTEES, SECURED_BY, DEPENDS_ON
+|
++-- (Analytics & Algorithms)
+|   |-- Contagion Analysis
+|   |-- Credit Risk Scoring
+|   |-- Data Lineage Tracking
+|   +-- Conflict of Interest Detection
+|
++-- (Outcomes & Actions)
+    |-- Dynamic Credit Risk Models
+    |-- Systemic Risk Stress Testing
+    +-- Automated Compliance Reporting</code></pre>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-800 mb-4">Sample Code</h3>
+                            <pre><code class="language-python">from neo4j import GraphDatabase
+
+URI = "neo4j+s://instance.databases.neo4j.io"
+AUTH = ("neo4j", "password")
+
+class RiskCompliance:
+    def __init__(self, driver):
+        self.driver = driver
+
+    def find_exposed_assets(self, risk_event):
+        with self.driver.session() as session:
+            result = session.run("""
+                MATCH (r:RiskEvent {type: $risk_event})
+                MATCH (r)<-[:DEPENDS_ON*]-(a:Asset)
+                RETURN DISTINCT a.name as asset
+                """, risk_event=risk_event)
+            return [rec["asset"] for rec in result]
+</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/components/prism-python.min.js"></script>
+    <script>
+        function changeTab(event, tabID) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-link').forEach(link => {
+                link.className = link.className.replace(' border-indigo-500 text-indigo-600', ' border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300');
+            });
+
+            document.getElementById(tabID).classList.add('active');
+            event.currentTarget.className = event.currentTarget.className.replace(' border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300', ' border-indigo-500 text-indigo-600');
+        }
+    </script>
+
+</body>
+</html>
