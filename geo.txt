@@ -1,0 +1,1208 @@
+import pandas as pd
+import numpy as np
+import geopandas as gpd
+from shapely.geometry import Point
+import matplotlib.pyplot as plt
+import seaborn as sns
+import folium
+from sklearn.cluster import DBSCAN, KMeans
+from sklearn.ensemble import IsolationForest
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+from sklearn.metrics import silhouette_score
+import plotly.express as px
+from google.cloud import bigquery
+import warnings
+warnings.filterwarnings('ignore')
+
+class CommercialBankIPGeolocationAnalyzerBigQuery:
+    def __init__(self, project_id=None):
+        """
+        Initialize the analyzer with BigQuery client
+        """
+        self.project_id = project_id
+        self.bq_client = bigquery.Client(project=project_id) if project_id else bigquery.Client()
+        self.login_data = None
+        self.firmographic_data = None
+        self.transaction_data = None
+        self.merged_data = None
+        self.engineered_features = None
+        self.anomaly_model = None
+        self.segmentation_model = None
+        self.hq_coordinates = {}  # Cache for HQ coordinates by country
+        
+    def get_hq_coordinates(self, country):
+        """
+        Get approximate coordinates for headquarters country if not available
+        This is a simplified mapping - in production, use a proper geocoding service
+        """
+        country_coords = {
+            'USA': (39.8283, -98.5795),
+            'UK': (54.0061, -2.5479),
+            'Germany': (51.1657, 10.4515),
+            'Japan': (36.2048, 138.2529),
+            'Canada': (56.1304, -106.3468),
+            'France': (46.2276, 2.2137),
+            'Australia': (-25.2744, 133.7751),
+            'Singapore': (1.3521, 103.8198),
+            'China': (35.8617, 104.1954),
+            'India': (20.5937, 78.9629),
+            'Brazil': (-14.2350, -51.9253),
+            'Mexico': (23.6345, -102.5528),
+            'Italy': (41.8719, 12.5674),
+            'Spain': (40.4637, -3.7492),
+            'Netherlands': (52.1326, 5.2913),
+            'Switzerland': (46.8182, 8.2275),
+            'Sweden': (60.1282, 18.6435),
+            'Norway': (60.4720, 8.4689),
+            'Denmark': (56.2639, 9.5018),
+            'Finland': (61.9241, 25.7482),
+            'Belgium': (50.5039, 4.4699),
+            'Austria': (47.5162, 14.5501),
+            'Ireland': (53.4129, -8.2439),
+            'Portugal': (39.3999, -8.2245),
+            'Greece': (39.0742, 21.8243),
+            'Poland': (51.9194, 19.1451),
+            'Czech Republic': (49.8175, 15.4729),
+            'Hungary': (47.1625, 19.5033),
+            'Romania': (45.9432, 24.9668),
+            'Russia': (61.5240, 105.3188),
+            'South Korea': (35.9078, 127.7669),
+            'Indonesia': (-0.7893, 113.9213),
+            'Turkey': (38.9637, 35.2433),
+            'Saudi Arabia': (23.8859, 45.0792),
+            'United Arab Emirates': (23.4241, 53.8478),
+            'South Africa': (-30.5595, 22.9375),
+            'Argentina': (-38.4161, -63.6167),
+            'Chile': (-35.6751, -71.5430),
+            'Colombia': (4.5709, -74.2973),
+            'Peru': (-9.1900, -75.0152),
+            'Venezuela': (6.4238, -66.5897),
+            'New Zealand': (-40.9006, 174.8860),
+            'Malaysia': (4.2105, 101.9758),
+            'Thailand': (15.8700, 100.9925),
+            'Vietnam': (14.0583, 108.2772),
+            'Philippines': (12.8797, 121.7740),
+            'Pakistan': (30.3753, 69.3451),
+            'Bangladesh': (23.6850, 90.3563),
+            'Egypt': (26.8206, 30.8025),
+            'Nigeria': (9.0820, 8.6753),
+            'Kenya': (-0.0236, 37.9062),
+            'Israel': (31.0461, 34.8516),
+            'Ukraine': (48.3794, 31.1656),
+            'Belarus': (53.7098, 27.9534),
+            'Kazakhstan': (48.0196, 66.9237),
+            'Uzbekistan': (41.3775, 64.5853),
+            'Qatar': (25.3548, 51.1839),
+            'Kuwait': (29.3117, 47.4818),
+            'Oman': (21.5126, 55.9233),
+            'Bahrain': (25.9304, 50.6378),
+            'Jordan': (30.5852, 36.2384),
+            'Lebanon': (33.8547, 35.8623),
+            'Iraq': (33.2232, 43.6793),
+            'Iran': (32.4279, 53.6880),
+            'Morocco': (31.7917, -7.0926),
+            'Tunisia': (33.8869, 9.5375),
+            'Algeria': (28.0339, 1.6596),
+            'Libya': (26.3351, 17.2283),
+            'Sudan': (12.8628, 30.2176),
+            'Ethiopia': (9.1450, 40.4897),
+            'Tanzania': (-6.3690, 34.8888),
+            'Uganda': (1.3733, 32.2903),
+            'Zambia': (-13.1339, 27.8493),
+            'Zimbabwe': (-19.0154, 29.1549),
+            'Botswana': (-22.3285, 24.6849),
+            'Namibia': (-22.9576, 18.4904),
+            'Mozambique': (-18.6657, 35.5296),
+            'Madagascar': (-18.7669, 46.8691),
+            'Angola': (-11.2027, 17.8739),
+            'Ghana': (7.9465, -1.0232),
+            'Cote d\'Ivoire': (7.5400, -5.5471),
+            'Senegal': (14.4974, -14.4524),
+            'Mali': (17.5707, -3.9962),
+            'Niger': (17.6078, 8.0817),
+            'Burkina Faso': (12.2383, -1.5616),
+            'Benin': (9.3077, 2.3158),
+            'Togo': (8.6195, 0.8248),
+            'Sierra Leone': (8.4606, -11.7799),
+            'Liberia': (6.4281, -9.4295),
+            'Guinea': (9.9456, -9.6966),
+            'Guinea-Bissau': (11.8037, -15.1804),
+            'Gambia': (13.4432, -15.3101),
+            'Mauritania': (21.0079, -10.9408),
+            'Chad': (15.4542, 18.7322),
+            'Central African Republic': (6.6111, 20.9394),
+            'Republic of the Congo': (-0.2280, 15.8277),
+            'Democratic Republic of the Congo': (-4.0383, 21.7587),
+            'Rwanda': (-1.9403, 29.8739),
+            'Burundi': (-3.3731, 29.9189),
+            'South Sudan': (6.8770, 31.3070),
+            'Eritrea': (15.1794, 39.7823),
+            'Djibouti': (11.8251, 42.5903),
+            'Somalia': (5.1521, 46.1996),
+            'Seychelles': (-4.6796, 55.4920),
+            'Mauritius': (-20.3484, 57.5522),
+            'Comoros': (-11.8750, 43.8722),
+            'Cape Verde': (16.0021, -24.0132),
+            'Sao Tome and Principe': (0.1864, 6.6131),
+            'Equatorial Guinea': (1.6508, 10.2679),
+            'Gabon': (-0.8037, 11.6094),
+            'Cameroon': (7.3697, 12.3547),
+            'Nigeria': (9.0820, 8.6753),
+            # Add more countries as needed
+        }
+        
+        return country_coords.get(country, (0.0, 0.0))  # Default to (0,0) if country not found
+    
+    def load_data_from_bigquery(self, login_table_query, firmographic_table_query, transaction_table_query):
+        """
+        Load data directly from BigQuery using SQL queries
+        """
+        print("Loading data from BigQuery...")
+        
+        try:
+            # Load login data
+            print("Loading login data...")
+            self.login_data = self.bq_client.query(login_table_query).to_dataframe()
+            print(f"Login data loaded: {self.login_data.shape}")
+            
+            # Load firmographic data
+            print("Loading firmographic data...")
+            self.firmographic_data = self.bq_client.query(firmographic_table_query).to_dataframe()
+            print(f"Firmographic data loaded: {self.firmographic_data.shape}")
+            
+            # Load transaction data
+            print("Loading transaction data...")
+            self.transaction_data = self.bq_client.query(transaction_table_query).to_dataframe()
+            print(f"Transaction data loaded: {self.transaction_data.shape}")
+            
+            # Validate required columns in login data
+            required_login_cols = [
+                'client_id', 'user_id', 'login_ip', 'previous_login_ip', 
+                'login_time', 'previous_login_time', 'customer_headquarter_country',
+                'login_lat', 'login_long', 'login_country', 'login_city', 'duration_from_previous_login'
+            ]
+            
+            for col in required_login_cols:
+                if col not in self.login_data.columns:
+                    raise ValueError(f"Missing required column in login data: {col}")
+            
+            # Add HQ coordinates based on country
+            print("Adding headquarters coordinates based on country...")
+            self.login_data['hq_lat'] = self.login_data['customer_headquarter_country'].apply(
+                lambda x: self.get_hq_coordinates(x)[0]
+            )
+            self.login_data['hq_long'] = self.login_data['customer_headquarter_country'].apply(
+                lambda x: self.get_hq_coordinates(x)[1]
+            )
+            
+            # Convert timestamp columns
+            self.login_data['login_time'] = pd.to_datetime(self.login_data['login_time'])
+            self.login_data['previous_login_time'] = pd.to_datetime(self.login_data['previous_login_time'])
+            self.transaction_data['transaction_timestamp'] = pd.to_datetime(self.transaction_data['transaction_timestamp'])
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error loading data from BigQuery: {str(e)}")
+            raise
+    
+    def integrate_datasets(self):
+        """
+        Integrate the three datasets with proper handling of one-to-many relationships
+        """
+        print("Integrating datasets...")
+        
+        # Start with login data as the base
+        df = self.login_data.copy()
+        
+        # Merge with firmographic data
+        if self.firmographic_data is not None:
+            # Ensure client_id is the same type in both datasets
+            df['client_id'] = df['client_id'].astype(str)
+            self.firmographic_data['client_id'] = self.firmographic_data['client_id'].astype(str)
+            
+            # Merge firmographic data
+            df = df.merge(self.firmographic_data, on='client_id', how='left')
+            print(f"After merging with firmographic data: {df.shape}")
+        
+        # Merge with transaction data
+        if self.transaction_data is not None:
+            # Ensure client_id is the same type
+            self.transaction_data['client_id'] = self.transaction_data['client_id'].astype(str)
+            
+            # Create date columns for joining
+            df['login_date'] = df['login_time'].dt.date
+            self.transaction_data['transaction_date'] = self.transaction_data['transaction_timestamp'].dt.date
+            
+            # For each login, get transactions that occurred on the same day
+            # This handles the temporal relationship between logins and transactions
+            merged_with_transactions = df.merge(
+                self.transaction_data, 
+                on=['client_id', 'login_date'], 
+                how='left'
+            )
+            
+            # Handle cases where no transactions occurred on login date
+            merged_with_transactions['transaction_amount'] = merged_with_transactions['transaction_amount'].fillna(0)
+            if 'transaction_type' in merged_with_transactions.columns:
+                merged_with_transactions['transaction_type'] = merged_with_transactions['transaction_type'].fillna('No Transaction')
+            
+            df = merged_with_transactions
+            print(f"After merging with transaction data: {df.shape}")
+        
+        self.merged_data = df
+        
+        # Create summary statistics by client_id and user_id
+        print("Creating user-level and client-level aggregations...")
+        
+        # User-level aggregations
+        user_aggregates = df.groupby(['client_id', 'user_id']).agg({
+            'login_time': ['count', 'min', 'max'],
+            'duration_from_previous_login': ['mean', 'median', 'std'],
+            'login_lat': ['mean', 'std'],
+            'login_long': ['mean', 'std'],
+            'login_country': lambda x: x.nunique(),
+            'customer_headquarter_country': 'first',
+            'hq_lat': 'first',
+            'hq_long': 'first'
+        }).round(4)
+        
+        # Flatten column names
+        user_aggregates.columns = [
+            'login_count', 'first_login', 'last_login',
+            'avg_duration_between_logins', 'median_duration_between_logins', 'std_duration_between_logins',
+            'avg_login_lat', 'std_login_lat',
+            'avg_login_long', 'std_login_long',
+            'unique_countries_accessed',
+            'hq_country', 'hq_lat', 'hq_long'
+        ]
+        
+        # Calculate additional user-level features
+        user_aggregates['login_span_days'] = (user_aggregates['last_login'] - user_aggregates['first_login']).dt.days
+        user_aggregates['logins_per_day'] = user_aggregates['login_count'] / (user_aggregates['login_span_days'] + 1)
+        
+        # Client-level aggregations (aggregating across all users per client)
+        client_aggregates = df.groupby('client_id').agg({
+            'user_id': 'nunique',
+            'login_time': 'count',
+            'duration_from_previous_login': ['mean', 'median'],
+            'login_country': lambda x: x.nunique(),
+            'customer_headquarter_country': 'first',
+            'hq_lat': 'first',
+            'hq_long': 'first'
+        }).round(4)
+        
+        # Flatten column names
+        client_aggregates.columns = [
+            'total_users', 'total_logins',
+            'avg_duration_between_logins', 'median_duration_between_logins',
+            'total_unique_countries_accessed',
+            'hq_country', 'hq_lat', 'hq_long'
+        ]
+        
+        # Add firmographic data to client aggregates if available
+        if self.firmographic_data is not None:
+            firmo_cols = [col for col in self.firmographic_data.columns if col != 'client_id']
+            for col in firmo_cols:
+                if col in df.columns:
+                    client_aggregates[col] = df.groupby('client_id')[col].first()
+        
+        # Add transaction data to client aggregates if available
+        if 'transaction_amount' in df.columns:
+            client_transactions = df.groupby('client_id').agg({
+                'transaction_amount': ['sum', 'mean', 'count', 'std'],
+                'login_time': 'count'  # Total logins
+            })
+            client_transactions.columns = [
+                'total_transaction_amount', 'avg_transaction_amount', 
+                'transaction_count', 'std_transaction_amount', 'total_logins'
+            ]
+            client_transactions['transaction_amount_per_login'] = client_transactions['total_transaction_amount'] / client_transactions['total_logins']
+            
+            # Merge with client_aggregates
+            client_aggregates = client_aggregates.merge(
+                client_transactions, 
+                left_index=True, 
+                right_index=True, 
+                how='left'
+            )
+        
+        print(f"User-level aggregates: {user_aggregates.shape}")
+        print(f"Client-level aggregates: {client_aggregates.shape}")
+        
+        self.user_aggregates = user_aggregates.reset_index()
+        self.client_aggregates = client_aggregates.reset_index()
+        
+        return df
+    
+    def engineer_advanced_features(self):
+        """
+        Create advanced geospatial and behavioral features accounting for user-level patterns
+        """
+        print("Engineering advanced features...")
+        
+        df = self.merged_data.copy()
+        
+        # Calculate distance from HQ to login location using haversine formula
+        def haversine_distance(lat1, lon1, lat2, lon2):
+            R = 6371  # Earth radius in kilometers
+            phi1, phi2 = np.radians(lat1), np.radians(lat2)
+            delta_phi = np.radians(lat2 - lat1)
+            delta_lambda = np.radians(lon2 - lon1)
+            
+            a = np.sin(delta_phi/2)**2 + np.cos(phi1) * np.cos(phi2) * np.sin(delta_lambda/2)**2
+            c = 2 * np.arctan2(np.sqrt(a), np.sqrt(1-a))
+            return R * c
+        
+        # Calculate distance from HQ for each login
+        df['distance_from_hq_km'] = haversine_distance(
+            df['hq_lat'], df['hq_long'], df['login_lat'], df['login_long']
+        )
+        
+        # Flag if login is from HQ country
+        df['login_from_hq_country'] = (df['login_country'] == df['customer_headquarter_country']).astype(int)
+        
+        # Calculate login velocity if previous login data is available
+        # Sort by user_id and login_time to calculate consecutive login metrics
+        df = df.sort_values(['user_id', 'login_time']).reset_index(drop=True)
+        
+        # Calculate time difference between consecutive logins for the same user
+        df['prev_login_lat'] = df.groupby('user_id')['login_lat'].shift(1)
+        df['prev_login_long'] = df.groupby('user_id')['login_long'].shift(1)
+        df['prev_login_time'] = df.groupby('user_id')['login_time'].shift(1)
+        df['prev_login_country'] = df.groupby('user_id')['login_country'].shift(1)
+        
+        # Calculate time difference in hours
+        df['time_diff_hours'] = (df['login_time'] - df['prev_login_time']).dt.total_seconds() / 3600
+        df['time_diff_hours'] = df['time_diff_hours'].fillna(0)
+        
+        # Calculate distance between consecutive logins
+        df['distance_between_logins_km'] = haversine_distance(
+            df['prev_login_lat'], df['prev_login_long'], 
+            df['login_lat'], df['login_long']
+        )
+        df['distance_between_logins_km'] = df['distance_between_logins_km'].fillna(0)
+        
+        # Calculate login velocity (km/h)
+        df['login_velocity_kmph'] = df['distance_between_logins_km'] / df['time_diff_hours']
+        df['login_velocity_kmph'] = df['login_velocity_kmph'].replace([np.inf, -np.inf], np.nan).fillna(0)
+        
+        # Flag if crossing international borders between consecutive logins
+        df['crossed_borders'] = ((df['login_country'] != df['prev_login_country']) & 
+                                (df['prev_login_country'].notna())).astype(int)
+        
+        # Create user-level features
+        user_features = df.groupby('user_id').agg({
+            'distance_from_hq_km': ['mean', 'max', 'std', 'median'],
+            'login_velocity_kmph': ['mean', 'max', 'median'],
+            'crossed_borders': ['sum', 'mean'],
+            'login_from_hq_country': ['mean'],
+            'duration_from_previous_login': ['mean', 'median', 'std'],
+            'client_id': 'first',
+            'customer_headquarter_country': 'first',
+            'login_count': 'count'  # Number of logins for this user
+        }).round(4)
+        
+        # Flatten column names
+        user_features.columns = [
+            'avg_distance_from_hq', 'max_distance_from_hq', 'std_distance_from_hq', 'median_distance_from_hq',
+            'avg_login_velocity', 'max_login_velocity', 'median_login_velocity',
+            'total_border_crossings', 'pct_border_crossings',
+            'pct_logins_from_hq_country',
+            'avg_duration_between_logins', 'median_duration_between_logins', 'std_duration_between_logins',
+            'client_id', 'hq_country', 'total_logins'
+        ]
+        
+        # Create client-level features by aggregating user features
+        client_features = user_features.groupby('client_id').agg({
+            'avg_distance_from_hq': ['mean', 'max', 'std'],
+            'max_distance_from_hq': ['mean', 'max'],
+            'avg_login_velocity': ['mean', 'max'],
+            'pct_border_crossings': ['mean', 'max'],
+            'pct_logins_from_hq_country': ['mean', 'min'],
+            'total_logins': ['sum', 'mean'],
+            'hq_country': 'first'
+        }).round(4)
+        
+        # Flatten column names
+        client_features.columns = [
+            'client_avg_avg_distance', 'client_max_avg_distance', 'client_std_avg_distance',
+            'client_avg_max_distance', 'client_max_max_distance',
+            'client_avg_velocity', 'client_max_velocity',
+            'client_avg_border_crossing_pct', 'client_max_border_crossing_pct',
+            'client_avg_hq_login_pct', 'client_min_hq_login_pct',
+            'client_total_logins', 'client_avg_logins_per_user',
+            'hq_country'
+        ]
+        
+        # Merge with existing client aggregates
+        if hasattr(self, 'client_aggregates'):
+            # Add firmographic and transaction data if available
+            final_client_features = self.client_aggregates.set_index('client_id').merge(
+                client_features, 
+                left_index=True, 
+                right_index=True, 
+                how='left'
+            ).reset_index()
+        else:
+            final_client_features = client_features.reset_index()
+            final_client_features.rename(columns={'index': 'client_id'}, inplace=True)
+        
+        # Add additional business metrics
+        numeric_cols = final_client_features.select_dtypes(include=[np.number]).columns
+        for col in numeric_cols:
+            if 'revenue' in col.lower() and 'employee' in col.lower():
+                final_client_features['revenue_per_employee'] = final_client_features[col]
+            elif 'revenue' in col.lower() and 'transaction' in col.lower():
+                final_client_features['revenue_per_transaction'] = final_client_features[col]
+        
+        # Create risk and behavior flags
+        for col in final_client_features.columns:
+            if 'max_distance' in col:
+                final_client_features['high_distance_flag'] = (
+                    final_client_features[col] > final_client_features[col].quantile(0.95)
+                ).astype(int)
+            if 'max_velocity' in col:
+                final_client_features['high_velocity_flag'] = (
+                    final_client_features[col] > final_client_features[col].quantile(0.95)
+                ).astype(int)
+            if 'border_crossing' in col and 'max' in col:
+                final_client_features['high_mobility_flag'] = (
+                    final_client_features[col] > 0.5
+                ).astype(int)
+        
+        self.engineered_features = final_client_features
+        
+        print(f"Engineered features shape: {self.engineered_features.shape}")
+        print(f"Features include data from {self.engineered_features['client_id'].nunique()} unique clients")
+        
+        # Show correlation with key business metrics if available
+        business_metrics = [col for col in self.engineered_features.columns 
+                           if any(keyword in col.lower() for keyword in ['revenue', 'transaction', 'amount'])]
+        
+        if len(business_metrics) > 0:
+            print("\nTop correlations with business metrics:")
+            for metric in business_metrics[:3]:  # Show top 3 business metrics
+                if metric in self.engineered_features.columns:
+                    correlations = self.engineered_features.select_dtypes(include=[np.number]).corr()[metric].abs().sort_values(ascending=False)
+                    print(f"\nCorrelations with {metric}:")
+                    print(correlations.head())
+        
+        return self.engineered_features
+    
+    def visualize_user_and_client_patterns(self):
+        """
+        Create comprehensive visualizations accounting for user-client hierarchy
+        """
+        print("Generating visualizations...")
+        
+        # Create a GeoDataFrame for mapping
+        if self.merged_data is not None:
+            # Sample data for visualization to avoid overcrowding
+            viz_data = self.merged_data.sample(min(5000, len(self.merged_data))).copy()
+            
+            # Create interactive map with Folium
+            # Use the median of login coordinates as center
+            center_lat = viz_data['login_lat'].median()
+            center_long = viz_data['login_long'].median()
+            
+            m = folium.Map(location=[center_lat, center_long], zoom_start=3)
+            
+            # Add points for login locations, colored by whether from HQ country
+            for idx, row in viz_data.iterrows():
+                color = 'green' if row['login_from_hq_country'] else 'red'
+                popup_text = f"Client: {row['client_id']}<br>User: {row['user_id']}<br>Country: {row['login_country']}<br>HQ Country: {row['customer_headquarter_country']}<br>From HQ: {'Yes' if row['login_from_hq_country'] else 'No'}"
+                
+                if 'transaction_amount' in row and not pd.isna(row['transaction_amount']):
+                    popup_text += f"<br>Transaction: ${row['transaction_amount']:,.2f}"
+                
+                folium.CircleMarker(
+                    location=[row['login_lat'], row['login_long']],
+                    radius=5,
+                    popup=popup_text,
+                    color=color,
+                    fill=True,
+                    fill_color=color,
+                    fill_opacity=0.7
+                ).add_to(m)
+            
+            # Save map
+            m.save('login_heatmap_by_hq_status.html')
+            print("Interactive map saved as 'login_heatmap_by_hq_status.html'")
+        
+        # Create static visualizations
+        fig, axes = plt.subplots(2, 3, figsize=(18, 12))
+        
+        if self.engineered_features is not None:
+            # 1. Distribution of average distance from HQ
+            axes[0, 0].hist(self.engineered_features['client_avg_avg_distance'], bins=30, edgecolor='black')
+            axes[0, 0].set_xlabel('Average Distance from HQ (km)')
+            axes[0, 0].set_ylabel('Frequency')
+            axes[0, 0].set_title('Distribution of Average Distance from HQ')
+            axes[0, 0].grid(True, alpha=0.3)
+            
+            # 2. Login velocity vs. transaction amount (if available)
+            transaction_cols = [col for col in self.engineered_features.columns if 'transaction' in col.lower() and 'amount' in col.lower()]
+            if len(transaction_cols) > 0:
+                transaction_col = transaction_cols[0]
+                axes[0, 1].scatter(self.engineered_features['client_avg_velocity'], 
+                                 self.engineered_features[transaction_col], alpha=0.6)
+                axes[0, 1].set_xlabel('Average Login Velocity (km/h)')
+                axes[0, 1].set_ylabel(transaction_col.replace('_', ' ').title())
+                axes[0, 1].set_title(f'{transaction_col.replace("_", " ").title()} vs Login Velocity')
+                axes[0, 1].grid(True, alpha=0.3)
+            else:
+                axes[0, 1].text(0.5, 0.5, 'Transaction data not available', ha='center', va='center')
+                axes[0, 1].set_title('Transaction vs Login Velocity')
+            
+            # 3. Percentage of HQ logins by industry (if industry data available)
+            industry_cols = [col for col in self.engineered_features.columns if 'industry' in col.lower()]
+            if len(industry_cols) > 0:
+                industry_col = industry_cols[0]
+                if industry_col in self.engineered_features.columns:
+                    industry_hq_login = self.engineered_features.groupby(industry_col)['client_avg_hq_login_pct'].mean().sort_values(ascending=False)
+                    axes[0, 2].bar(range(len(industry_hq_login)), industry_hq_login.values)
+                    axes[0, 2].set_xlabel('Industry')
+                    axes[0, 2].set_ylabel('Avg % Logins from HQ Country')
+                    axes[0, 2].set_title('HQ Logins by Industry')
+                    axes[0, 2].set_xticks(range(len(industry_hq_login)))
+                    axes[0, 2].set_xticklabels(industry_hq_login.index, rotation=45, ha='right')
+                    axes[0, 2].grid(True, alpha=0.3)
+                else:
+                    axes[0, 2].text(0.5, 0.5, 'Industry data not available', ha='center', va='center')
+                    axes[0, 2].set_title('HQ Logins by Industry')
+            else:
+                axes[0, 2].text(0.5, 0.5, 'Industry data not available', ha='center', va='center')
+                axes[0, 2].set_title('HQ Logins by Industry')
+            
+            # 4. Border crossing percentage distribution
+            border_cols = [col for col in self.engineered_features.columns if 'border' in col.lower() and 'pct' in col.lower()]
+            if len(border_cols) > 0:
+                border_col = border_cols[0]
+                axes[1, 0].hist(self.engineered_features[border_col], bins=30, edgecolor='black')
+                axes[1, 0].set_xlabel('Border Crossing Percentage')
+                axes[1, 0].set_ylabel('Frequency')
+                axes[1, 0].set_title('Distribution of Border Crossing Percentage')
+                axes[1, 0].grid(True, alpha=0.3)
+            else:
+                axes[1, 0].text(0.5, 0.5, 'Border crossing data not available', ha='center', va='center')
+                axes[1, 0].set_title('Border Crossing Distribution')
+            
+            # 5. Users per client
+            if 'total_users' in self.engineered_features.columns:
+                axes[1, 1].hist(self.engineered_features['total_users'], bins=30, edgecolor='black')
+                axes[1, 1].set_xlabel('Number of Users per Client')
+                axes[1, 1].set_ylabel('Frequency')
+                axes[1, 1].set_title('Distribution of Users per Client')
+                axes[1, 1].grid(True, alpha=0.3)
+            else:
+                axes[1, 1].text(0.5, 0.5, 'User count data not available', ha='center', va='center')
+                axes[1, 1].set_title('Users per Client')
+            
+            # 6. Correlation heatmap of key features
+            key_features = []
+            feature_keywords = ['distance', 'velocity', 'border', 'hq', 'login', 'transaction', 'revenue']
+            for col in self.engineered_features.select_dtypes(include=[np.number]).columns:
+                if any(keyword in col.lower() for keyword in feature_keywords):
+                    key_features.append(col)
+            
+            if len(key_features) > 1:
+                corr_data = self.engineered_features[key_features].corr()
+                sns.heatmap(corr_data, annot=False, cmap='coolwarm', center=0, ax=axes[1, 2])
+                axes[1, 2].set_title('Correlation Heatmap of Key Features')
+            else:
+                axes[1, 2].text(0.5, 0.5, 'Insufficient numeric features for correlation', ha='center', va='center')
+                axes[1, 2].set_title('Feature Correlation Heatmap')
+        
+        plt.tight_layout()
+        plt.savefig('geospatial_analysis_dashboard_v2.png', dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        print("Static visualizations saved as 'geospatial_analysis_dashboard_v2.png'")
+        
+        return m if 'm' in locals() else None, fig
+    
+    def build_anomaly_detection_models(self):
+        """
+        Build anomaly detection models at both user and client levels
+        """
+        print("Building anomaly detection models...")
+        
+        # Client-level anomaly detection
+        client_anomaly_report = self._build_client_anomaly_detection()
+        
+        # User-level anomaly detection
+        user_anomaly_report = self._build_user_anomaly_detection()
+        
+        return client_anomaly_report, user_anomaly_report
+    
+    def _build_client_anomaly_detection(self):
+        """
+        Build anomaly detection model at client level
+        """
+        print("Building client-level anomaly detection model...")
+        
+        if self.engineered_features is None or len(self.engineered_features) == 0:
+            print("No engineered features available for anomaly detection")
+            return None
+        
+        # Select features for anomaly detection
+        anomaly_features = []
+        feature_keywords = ['distance', 'velocity', 'border', 'login', 'transaction', 'revenue']
+        
+        for col in self.engineered_features.select_dtypes(include=[np.number]).columns:
+            if any(keyword in col.lower() for keyword in feature_keywords):
+                anomaly_features.append(col)
+        
+        if len(anomaly_features) == 0:
+            print("No suitable features found for anomaly detection")
+            return None
+        
+        # Create feature matrix
+        X_client = self.engineered_features[anomaly_features].copy()
+        
+        # Handle any remaining NaN values
+        X_client = X_client.fillna(X_client.mean())
+        
+        # Remove any infinite values
+        X_client = X_client.replace([np.inf, -np.inf], np.nan).fillna(X_client.mean())
+        
+        # Scale features
+        scaler = StandardScaler()
+        X_client_scaled = scaler.fit_transform(X_client)
+        
+        # Apply Isolation Forest
+        iso_forest = IsolationForest(
+            contamination=0.05,  # Expect 5% anomalies
+            random_state=42,
+            n_estimators=100
+        )
+        
+        client_anomaly_scores = iso_forest.fit_predict(X_client_scaled)
+        client_anomaly_probabilities = iso_forest.score_samples(X_client_scaled)
+        
+        # Add results to engineered features
+        self.engineered_features['client_anomaly_score'] = client_anomaly_probabilities
+        self.engineered_features['is_client_anomaly'] = (client_anomaly_scores == -1).astype(int)
+        
+        print(f"Detected {self.engineered_features['is_client_anomaly'].sum()} client-level anomalies out of {len(self.engineered_features)} clients ({self.engineered_features['is_client_anomaly'].mean()*100:.2f}%)")
+        
+        # Create anomaly report
+        client_anomaly_report = self.engineered_features[self.engineered_features['is_client_anomaly'] == 1].copy()
+        
+        # Add company name if available
+        if 'company_name' in self.engineered_features.columns:
+            client_anomaly_report = client_anomaly_report[[
+                'client_id', 'company_name', 'hq_country', 'client_anomaly_score'
+            ] + [col for col in anomaly_features if col in self.engineered_features.columns]]
+        else:
+            client_anomaly_report = client_anomaly_report[[
+                'client_id', 'hq_country', 'client_anomaly_score'
+            ] + [col for col in anomaly_features if col in self.engineered_features.columns]]
+        
+        client_anomaly_report = client_anomaly_report.sort_values('client_anomaly_score')
+        
+        print("\nTop 10 Most Anomalous Clients:")
+        print(client_anomaly_report.head(10))
+        
+        return client_anomaly_report
+    
+    def _build_user_anomaly_detection(self):
+        """
+        Build anomaly detection model at user level
+        """
+        print("Building user-level anomaly detection model...")
+        
+        # Check if we have user aggregates
+        if not hasattr(self, 'user_aggregates') or self.user_aggregates is None:
+            print("User aggregates not available for anomaly detection")
+            return None
+        
+        # Select features for anomaly detection
+        user_features = []
+        feature_keywords = ['distance', 'velocity', 'border', 'duration', 'login']
+        
+        for col in self.user_aggregates.select_dtypes(include=[np.number]).columns:
+            if any(keyword in col.lower() for keyword in feature_keywords):
+                user_features.append(col)
+        
+        if len(user_features) == 0:
+            print("No suitable features found for user-level anomaly detection")
+            return None
+        
+        # Create feature matrix
+        X_user = self.user_aggregates[user_features].copy()
+        
+        # Handle any remaining NaN values
+        X_user = X_user.fillna(X_user.mean())
+        
+        # Remove any infinite values
+        X_user = X_user.replace([np.inf, -np.inf], np.nan).fillna(X_user.mean())
+        
+        # Scale features
+        scaler = StandardScaler()
+        X_user_scaled = scaler.fit_transform(X_user)
+        
+        # Apply Isolation Forest
+        iso_forest = IsolationForest(
+            contamination=0.05,  # Expect 5% anomalies
+            random_state=42,
+            n_estimators=100
+        )
+        
+        user_anomaly_scores = iso_forest.fit_predict(X_user_scaled)
+        user_anomaly_probabilities = iso_forest.score_samples(X_user_scaled)
+        
+        # Add results to user aggregates
+        self.user_aggregates['user_anomaly_score'] = user_anomaly_probabilities
+        self.user_aggregates['is_user_anomaly'] = (user_anomaly_scores == -1).astype(int)
+        
+        print(f"Detected {self.user_aggregates['is_user_anomaly'].sum()} user-level anomalies out of {len(self.user_aggregates)} users ({self.user_aggregates['is_user_anomaly'].mean()*100:.2f}%)")
+        
+        # Create anomaly report
+        user_anomaly_report = self.user_aggregates[self.user_aggregates['is_user_anomaly'] == 1].copy()
+        
+        user_anomaly_report = user_anomaly_report[[
+            'user_id', 'client_id', 'user_anomaly_score'
+        ] + [col for col in user_features if col in self.user_aggregates.columns]]
+        
+        user_anomaly_report = user_anomaly_report.sort_values('user_anomaly_score')
+        
+        print("\nTop 10 Most Anomalous Users:")
+        print(user_anomaly_report.head(10))
+        
+        return user_anomaly_report
+    
+    def perform_client_segmentation(self):
+        """
+        Perform client segmentation based on geospatial and behavioral patterns
+        """
+        print("Performing client segmentation...")
+        
+        if self.engineered_features is None or len(self.engineered_features) == 0:
+            print("No engineered features available for segmentation")
+            return None
+        
+        # Select features for segmentation
+        segment_features = []
+        feature_keywords = ['distance', 'velocity', 'border', 'login', 'transaction', 'revenue', 'user']
+        
+        for col in self.engineered_features.select_dtypes(include=[np.number]).columns:
+            if any(keyword in col.lower() for keyword in feature_keywords):
+                segment_features.append(col)
+        
+        if len(segment_features) == 0:
+            print("No suitable features found for segmentation")
+            return None
+        
+        # Create feature matrix
+        X_segment = self.engineered_features[segment_features].copy()
+        
+        # Handle any remaining NaN values
+        X_segment = X_segment.fillna(X_segment.mean())
+        
+        # Remove any infinite values
+        X_segment = X_segment.replace([np.inf, -np.inf], np.nan).fillna(X_segment.mean())
+        
+        # Scale features
+        scaler = StandardScaler()
+        X_segment_scaled = scaler.fit_transform(X_segment)
+        
+        # Determine optimal number of clusters using silhouette score
+        silhouette_scores = []
+        k_range = range(2, min(11, len(X_segment_scaled)))
+        
+        if len(k_range) < 2:
+            print("Insufficient data for clustering")
+            return None
+        
+        for k in k_range:
+            kmeans = KMeans(n_clusters=k, random_state=42, n_init=10)
+            cluster_labels = kmeans.fit_predict(X_segment_scaled)
+            silhouette_avg = silhouette_score(X_segment_scaled, cluster_labels)
+            silhouette_scores.append(silhouette_avg)
+        
+        optimal_k = k_range[np.argmax(silhouette_scores)]
+        print(f"Optimal number of clusters: {optimal_k}")
+        
+        # Apply K-Means with optimal k
+        self.segmentation_model = KMeans(n_clusters=optimal_k, random_state=42, n_init=10)
+        cluster_labels = self.segmentation_model.fit_predict(X_segment_scaled)
+        
+        # Add cluster labels to engineered features
+        self.engineered_features['cluster'] = cluster_labels
+        
+        # Create cluster profiles
+        numeric_columns = self.engineered_features.select_dtypes(include=[np.number]).columns.tolist()
+        agg_functions = {col: 'mean' for col in numeric_columns if col not in ['cluster', 'client_id']}
+        agg_functions['client_id'] = 'count'
+        
+        # Add categorical columns if they exist
+        categorical_columns = self.engineered_features.select_dtypes(exclude=[np.number]).columns.tolist()
+        for col in categorical_columns:
+            if col not in ['cluster', 'client_id']:
+                agg_functions[col] = lambda x: x.mode().iloc[0] if len(x.mode()) > 0 else 'N/A'
+        
+        cluster_profiles = self.engineered_features.groupby('cluster').agg(agg_functions).round(4)
+        cluster_profiles = cluster_profiles.rename(columns={'client_id': 'client_count'})
+        
+        print("\nCluster Profiles:")
+        print(cluster_profiles)
+        
+        # Visualize clusters using PCA
+        if X_segment_scaled.shape[1] > 2:
+            pca = PCA(n_components=2)
+            pca_result = pca.fit_transform(X_segment_scaled)
+        else:
+            pca_result = X_segment_scaled[:, :2]
+            pca = None
+        
+        plt.figure(figsize=(12, 8))
+        scatter = plt.scatter(pca_result[:, 0], pca_result[:, 1], c=cluster_labels, cmap='viridis', alpha=0.7)
+        plt.xlabel(f'PC1 ({pca.explained_variance_ratio_[0]:.2%} variance)' if pca else 'Feature 1')
+        plt.ylabel(f'PC2 ({pca.explained_variance_ratio_[1]:.2%} variance)' if pca else 'Feature 2')
+        plt.title('Client Segmentation Visualization (PCA)')
+        plt.colorbar(scatter, label='Cluster')
+        plt.grid(True, alpha=0.3)
+        plt.savefig('customer_segmentation_pca_v2.png', dpi=300, bbox_inches='tight')
+        plt.show()
+        
+        return cluster_profiles
+    
+    def generate_comprehensive_business_report(self):
+        """
+        Generate comprehensive business report with actionable insights
+        """
+        print("Generating comprehensive business report...")
+        
+        report = {
+            'executive_summary': {},
+            'data_summary': {},
+            'anomaly_detection_insights': {},
+            'customer_segmentation_insights': {},
+            'user_behavior_insights': {},
+            'recommendations': []
+        }
+        
+        # Executive Summary
+        total_clients = len(self.engineered_features) if self.engineered_features is not None else 0
+        client_anomalies = self.engineered_features['is_client_anomaly'].sum() if 'is_client_anomaly' in self.engineered_features.columns else 0
+        client_anomaly_percentage = (client_anomalies / total_clients) * 100 if total_clients > 0 else 0
+        total_users = len(self.user_aggregates) if hasattr(self, 'user_aggregates') and self.user_aggregates is not None else 0
+        user_anomalies = self.user_aggregates['is_user_anomaly'].sum() if hasattr(self, 'user_aggregates') and 'is_user_anomaly' in self.user_aggregates.columns else 0
+        user_anomaly_percentage = (user_anomalies / total_users) * 100 if total_users > 0 else 0
+        segments = self.engineered_features['cluster'].nunique() if 'cluster' in self.engineered_features.columns else 0
+        
+        report['executive_summary'] = {
+            'total_clients_analyzed': int(total_clients),
+            'total_users_analyzed': int(total_users),
+            'client_anomalies_identified': int(client_anomalies),
+            'client_anomaly_percentage': round(client_anomaly_percentage, 2),
+            'user_anomalies_identified': int(user_anomalies),
+            'user_anomaly_percentage': round(user_anomaly_percentage, 2),
+            'segments_identified': int(segments),
+            'date_of_analysis': pd.Timestamp.now().strftime('%Y-%m-%d'),
+            'data_period': f"{self.merged_data['login_time'].min().strftime('%Y-%m-%d')} to {self.merged_data['login_time'].max().strftime('%Y-%m-%d')}" if self.merged_data is not None else "N/A"
+        }
+        
+        # Data Summary
+        if self.merged_data is not None:
+            report['data_summary'] = {
+                'total_logins': len(self.merged_data),
+                'date_range': f"{self.merged_data['login_time'].min().strftime('%Y-%m-%d')} to {self.merged_data['login_time'].max().strftime('%Y-%m-%d')}",
+                'countries_represented': int(self.merged_data['login_country'].nunique()),
+                'avg_logins_per_user': round(len(self.merged_data) / total_users, 2) if total_users > 0 else 0,
+                'avg_users_per_client': round(total_users / total_clients, 2) if total_clients > 0 else 0
+            }
+        
+        # Anomaly Detection Insights
+        if 'is_client_anomaly' in self.engineered_features.columns:
+            anomaly_clients = self.engineered_features[self.engineered_features['is_client_anomaly'] == 1]
+            normal_clients = self.engineered_features[self.engineered_features['is_client_anomaly'] == 0]
+            
+            # Identify key differentiators
+            comparison_metrics = {}
+            numeric_cols = self.engineered_features.select_dtypes(include=[np.number]).columns
+            for col in numeric_cols:
+                if col not in ['is_client_anomaly', 'client_anomaly_score']:
+                    if len(anomaly_clients) > 0 and len(normal_clients) > 0:
+                        comparison_metrics[col] = {
+                            'anomaly_mean': round(anomaly_clients[col].mean(), 4),
+                            'normal_mean': round(normal_clients[col].mean(), 4),
+                            'difference': round(anomaly_clients[col].mean() - normal_clients[col].mean(), 4)
+                        }
+            
+            report['anomaly_detection_insights'] = {
+                'anomaly_characteristics': comparison_metrics,
+                'top_anomaly_clients': anomaly_clients.sort_values('client_anomaly_score').head(10)[
+                    ['client_id', 'client_anomaly_score']
+                ].to_dict('records') if len(anomaly_clients) > 0 else []
+            }
+        
+        # Customer Segmentation Insights
+        if 'cluster' in self.engineered_features.columns:
+            cluster_profiles = self.engineered_features.groupby('cluster').agg({
+                'client_id': 'count',
+            }).round(4)
+            
+            cluster_profiles = cluster_profiles.rename(columns={'client_id': 'client_count'})
+            
+            # Add key metrics to cluster profiles
+            key_metrics = ['client_avg_avg_distance', 'client_avg_velocity', 'client_avg_border_crossing_pct']
+            for metric in key_metrics:
+                if metric in self.engineered_features.columns:
+                    cluster_profiles[metric] = self.engineered_features.groupby('cluster')[metric].mean().round(4)
+            
+            # Add business metrics if available
+            business_metrics = [col for col in self.engineered_features.columns 
+                               if any(keyword in col.lower() for keyword in ['revenue', 'transaction', 'amount'])]
+            for metric in business_metrics[:3]:  # Top 3 business metrics
+                if metric in self.engineered_features.columns:
+                    cluster_profiles[metric] = self.engineered_features.groupby('cluster')[metric].mean().round(4)
+            
+            # Calculate segment value scores
+            value_metrics = [col for col in business_metrics if 'revenue' in col.lower() or 'amount' in col.lower()]
+            if len(value_metrics) > 0:
+                primary_value_metric = value_metrics[0]
+                cluster_profiles['segment_value_score'] = (
+                    cluster_profiles[primary_value_metric] / cluster_profiles[primary_value_metric].max()
+                ) * cluster_profiles['client_count'] / cluster_profiles['client_count'].max()
+            
+            report['customer_segmentation_insights'] = {
+                'cluster_profiles': cluster_profiles.to_dict('index'),
+                'highest_value_segment': int(cluster_profiles['segment_value_score'].idxmax()) if 'segment_value_score' in cluster_profiles.columns else 0,
+                'largest_segment': int(cluster_profiles['client_count'].idxmax()),
+                'most_mobile_segment': int(cluster_profiles['client_avg_border_crossing_pct'].idxmax()) if 'client_avg_border_crossing_pct' in cluster_profiles.columns else 0
+            }
+        
+        # User Behavior Insights
+        if hasattr(self, 'user_aggregates') and self.user_aggregates is not None:
+            report['user_behavior_insights'] = {
+                'avg_logins_per_user': round(self.user_aggregates['total_logins'].mean(), 2),
+                'avg_distance_from_hq': round(self.user_aggregates['avg_distance_from_hq'].mean(), 2),
+                'avg_login_velocity': round(self.user_aggregates['avg_login_velocity'].mean(), 2),
+                'pct_users_crossing_borders': round(self.user_aggregates['pct_border_crossings'].mean() * 100, 2),
+                'pct_users_logging_in_from_hq': round(self.user_aggregates['pct_logins_from_hq_country'].mean() * 100, 2)
+            }
+        
+        # Recommendations
+        recommendations = []
+        
+        # Anomaly-related recommendations
+        if client_anomalies > 0:
+            recommendations.append({
+                'priority': 'High',
+                'category': 'Risk Management',
+                'recommendation': f'Investigate the {client_anomalies} identified anomalous clients for potential fraud or security breaches.',
+                'action_items': [
+                    'Conduct enhanced due diligence on top 10 most anomalous clients',
+                    'Implement additional authentication requirements for clients with unusual geospatial patterns',
+                    'Review transaction patterns of clients with high border crossing percentages'
+                ]
+            })
+        
+        if user_anomalies > 0:
+            recommendations.append({
+                'priority': 'High',
+                'category': 'User Security',
+                'recommendation': f'Investigate the {user_anomalies} identified anomalous users, as they may represent compromised accounts or insider threats.',
+                'action_items': [
+                    'Reset credentials for anomalous users',
+                    'Implement step-up authentication for these users',
+                    'Review all transactions initiated by these users'
+                ]
+            })
+        
+        # Segmentation-related recommendations
+        if 'cluster' in self.engineered_features.columns:
+            highest_value_segment = report['customer_segmentation_insights']['highest_value_segment']
+            most_mobile_segment = report['customer_segmentation_insights']['most_mobile_segment']
+            
+            recommendations.append({
+                'priority': 'High',
+                'category': 'Revenue Growth',
+                'recommendation': f'Develop targeted marketing campaigns for Segment {highest_value_segment}, identified as the highest-value client segment.',
+                'action_items': [
+                    'Create segment-specific product bundles based on their transaction patterns',
+                    'Assign dedicated relationship managers to top clients in this segment',
+                    'Develop case studies showcasing success stories from this segment'
+                ]
+            })
+            
+            recommendations.append({
+                'priority': 'Medium',
+                'category': 'Product Development',
+                'recommendation': f'Develop specialized features for Segment {most_mobile_segment}, which shows the highest international mobility.',
+                'action_items': [
+                    'Implement multi-language support for online banking',
+                    'Develop location-based service recommendations',
+                    'Create specialized treasury management tools for multi-national operations'
+                ]
+            })
+        
+        # User behavior recommendations
+        recommendations.append({
+            'priority': 'Medium',
+            'category': 'User Experience',
+            'recommendation': 'Enhance mobile and international user experience based on user behavior patterns.',
+            'action_items': [
+                'Optimize application performance for users accessing from different regions',
+                'Implement location-based content personalization',
+                'Develop educational materials for users with high login velocity'
+            ]
+        })
+        
+        # Operational recommendations
+        recommendations.append({
+            'priority': 'Medium',
+            'category': 'Operational Efficiency',
+            'recommendation': 'Implement automated alerts for login patterns that exceed established thresholds.',
+            'action_items': [
+                'Set up real-time monitoring for logins with velocity > 95th percentile',
+                'Create automated reports for clients with login locations > 95th percentile distance from HQ',
+                'Integrate geolocation anomaly detection into existing fraud monitoring systems'
+            ]
+        })
+        
+        report['recommendations'] = recommendations
+        
+        # Save report to file
+        import json
+        with open('ip_geolocation_business_report_v2.json', 'w') as f:
+            json.dump(report, f, indent=2, default=str)
+        
+        print("Business report saved as 'ip_geolocation_business_report_v2.json'")
+        
+        # Print summary
+        print(f"\nBUSINESS REPORT SUMMARY")
+        print(f"=======================")
+        print(f"Analyzed {report['executive_summary']['total_clients_analyzed']} commercial clients with {report['executive_summary']['total_users_analyzed']} users")
+        print(f"Identified {report['executive_summary']['client_anomalies_identified']} client anomalies ({report['executive_summary']['client_anomaly_percentage']}%)")
+        print(f"Identified {report['executive_summary']['user_anomalies_identified']} user anomalies ({report['executive_summary']['user_anomaly_percentage']}%)")
+        print(f"Segmented clients into {report['executive_summary']['segments_identified']} distinct groups")
+        
+        print(f"\nKEY RECOMMENDATIONS:")
+        for i, rec in enumerate(recommendations[:3], 1):
+            print(f"{i}. [{rec['priority']}] {rec['category']}: {rec['recommendation']}")
+        
+        return report
+    
+    def run_full_analysis(self, login_table_query, firmographic_table_query, transaction_table_query):
+        """
+        Run the full analysis pipeline
+        """
+        print("Starting full IP geolocation analysis pipeline...")
+        
+        try:
+            # Step 1: Load data from BigQuery
+            self.load_data_from_bigquery(
+                login_table_query, 
+                firmographic_table_query, 
+                transaction_table_query
+            )
+            
+            # Step 2: Integrate datasets
+            self.integrate_datasets()
+            
+            # Step 3: Engineer advanced features
+            self.engineer_advanced_features()
+            
+            # Step 4: Visualize patterns
+            self.visualize_user_and_client_patterns()
+            
+            # Step 5: Build anomaly detection models
+            client_anomalies, user_anomalies = self.build_anomaly_detection_models()
+            
+            # Step 6: Perform customer segmentation
+            cluster_profiles = self.perform_client_segmentation()
+            
+            # Step 7: Generate business report
+            business_report = self.generate_comprehensive_business_report()
+            
+            print("\nANALYSIS COMPLETE")
+            print("=================")
+            print("All outputs have been generated and saved to files.")
+            print("- Interactive map: 'login_heatmap_by_hq_status.html'")
+            print("- Static visualizations: 'geospatial_analysis_dashboard_v2.png' and 'customer_segmentation_pca_v2.png'")
+            print("- Business report: 'ip_geolocation_business_report_v2.json'")
+            
+            return {
+                'login_data': self.login_data,
+                'engineered_features': self.engineered_features,
+                'user_aggregates': self.user_aggregates if hasattr(self, 'user_aggregates') else None,
+                'client_anomalies': client_anomalies,
+                'user_anomalies': user_anomalies,
+                'cluster_profiles': cluster_profiles,
+                'business_report': business_report
+            }
+            
+        except Exception as e:
+            print(f"Error during analysis: {str(e)}")
+            raise
+
+# Example usage with BigQuery
+if __name__ == "__main__":
+    # Initialize analyzer
+    # Replace 'your-project-id' with your actual Google Cloud project ID
+    analyzer = CommercialBankIPGeolocationAnalyzerBigQuery(project_id='your-project-id')
+    
+    # Define your BigQuery table queries
+    # Replace these with your actual table names and any necessary WHERE clauses
+    
+    LOGIN_TABLE_QUERY = """
+    SELECT 
+        client_id,
+        user_id,
+        login_ip,
+        previous_login_ip,
+        login_time,
+        previous_login_time,
+        customer_headquarter_country,
+        login_lat,
+        login_long,
+        login_country,
+        login_city,
+        duration_from_previous_login
+    FROM `your-project.your-dataset.login_table`
+    WHERE login_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 90 DAY)
+    """
+    
+    FIRMOGRAPHIC_TABLE_QUERY = """
+    SELECT 
+        client_id,
+        company_name,
+        industry,
+        revenue,
+        employee_count,
+        -- Add any other firmographic columns you have
+        customer_headquarter_country
+    FROM `your-project.your-dataset.firmographic_table`
+    """
+    
+    TRANSACTION_TABLE_QUERY = """
+    SELECT 
+        client_id,
+        transaction_timestamp,
+        transaction_amount,
+        transaction_type,
+        product_category
+        -- Add any other transaction columns you need
+    FROM `your-project.your-dataset.transaction_table`
+    WHERE transaction_timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 90 DAY)
+    """
+    
+    # Run the full analysis
+    try:
+        results = analyzer.run_full_analysis(
+            LOGIN_TABLE_QUERY,
+            FIRMOGRAPHIC_TABLE_QUERY,
+            TRANSACTION_TABLE_QUERY
+        )
+        
+        print("\nAnalysis completed successfully!")
+        print(f"Results include data for {len(results['engineered_features'])} clients")
+        
+    except Exception as e:
+        print(f"Error running analysis: {str(e)}")
+        # You may want to add more specific error handling here
